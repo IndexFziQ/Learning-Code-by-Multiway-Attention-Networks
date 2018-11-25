@@ -4,24 +4,24 @@ import json
 
 import jieba
 
-
+# 得到分词后的词序列
 def seg_line(line):
     return list(jieba.cut(line))
 
-
+# 得到问题、原文、选项、ID的汇总
 def seg_data(path):
-    print 'start process ', path
+    print 'start process', path
     data = []
     with open(path, 'r') as f:
         for line in f:
-            dic = json.loads(line, encoding='utf-8')
+            dic = json.loads(line, encoding='utf-8') # Decode into a Python object
             question = dic['query']
             doc = dic['passage']
             alternatives = dic['alternatives']
             data.append([seg_line(question), seg_line(doc), alternatives.split('|'), dic['query_id']])
     return data
 
-
+# 得到每个词的词频
 def build_word_count(data):
     wordCount = {}
 
@@ -36,9 +36,9 @@ def build_word_count(data):
     print 'word type size ', len(wordCount)
     return wordCount
 
-
+# 构建vocab
 def build_word2id(wordCount, threshold=10):
-    word2id = {'<PAD>': 0, '<UNK>': 1}
+    word2id = {'<PAD>':0, '<UNK>':1}
     for word in wordCount:
         if wordCount[word] >= threshold:
             if word not in word2id:
@@ -48,10 +48,10 @@ def build_word2id(wordCount, threshold=10):
             for char in chars:
                 if char not in word2id:
                     word2id[char] = len(word2id)
-    print 'processed word size ', len(word2id)
+    print 'processed word size', len(word2id)
     return word2id
 
-
+# 得到原始数据每个词的ID
 def transform_data_to_id(raw_data, word2id):
     data = []
 
@@ -77,7 +77,7 @@ def transform_data_to_id(raw_data, word2id):
     for one in raw_data:
         question = map_sent_to_id(one[0])
         doc = map_sent_to_id(one[1])
-        candidates = [map_word_to_id(x) for x in one[2]]
+        candidates = [map_sent_to_id(x) for x in one[2]]
         length = [len(x) for x in candidates]
         max_length = max(length)
         if max_length > 1:
@@ -86,25 +86,27 @@ def transform_data_to_id(raw_data, word2id):
         data.append([question, doc, candidates, one[-1]])
     return data
 
-
+# 预处理原始数据
 def process_data(data_path, threshold):
-    train_file_path = data_path + 'ai_challenger_oqmrc_validationset_20180816/ai_challenger_oqmrc_validationset.json'
-    dev_file_path = data_path + 'ai_challenger_oqmrc_trainingset_20180816/ai_challenger_oqmrc_trainingset.json'
-    test_a_file_path = data_path + 'ai_challenger_oqmrc_testa_20180816/ai_challenger_oqmrc_testa.json'
-    test_b_file_path = data_path + 'ai_challenger_oqmrc_testb_20180816/ai_challenger_oqmrc_testb.json'
+    train_file_path = data_path + 'ai_challenger_oqmrc_validationset.json'
+    dev_file_path = data_path + 'ai_challenger_oqmrc_trainingset.json'
+    test_a_file_path = data_path + 'ai_challenger_oqmrc_testa.json'
+    test_b_file_path = data_path + 'ai_challenger_oqmrc_testb.json'
     path_lst = [train_file_path, dev_file_path, test_a_file_path, test_b_file_path]
     output_path = [data_path + x for x in ['dev.pickle', 'train.pickle', 'testa.pickle', 'testb.pickle']]
     return _process_data(path_lst, threshold, output_path)
 
-
+# 实现预处理功能
 def _process_data(path_lst, word_min_count=5, output_file_path=[]):
     raw_data = []
     for path in path_lst:
         raw_data.append(seg_data(path))
     word_count = build_word_count([y for x in raw_data for y in x])
+
     with open('data/word-count.obj', 'wb') as f:
         cPickle.dump(word_count, f)
     word2id = build_word2id(word_count, word_min_count)
+
     with open('data/word2id.obj', 'wb') as f:
         cPickle.dump(word2id, f)
     for one_raw_data, one_output_file_path in zip(raw_data, output_file_path):
