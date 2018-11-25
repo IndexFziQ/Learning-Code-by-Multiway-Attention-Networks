@@ -1,2 +1,5 @@
 # Learning-Code-by-Multiway-Attention-Networks
-learning the baseline for AIchallenger18
+
+The aim is to learn the baseline for AIchallenger18.
+
+I wound implement my idea on the base codes.
